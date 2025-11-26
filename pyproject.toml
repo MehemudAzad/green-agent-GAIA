@@ -1,0 +1,74 @@
+[project]
+name = "green-gaia-agent"
+version = "0.1.0"
+description = "Green Agent (Evaluator) for GAIA benchmark using A2A protocol and Google ADK"
+authors = [{ name = "AgentBeats Team" }]
+license = "Apache-2.0"
+readme = "README.md"
+dependencies = [
+    "google-cloud-aiplatform[adk,agent-engines]>=1.93.0",
+    "google-genai>=1.9.0",
+    "google-adk>=1.0.0",
+    "pydantic>=2.10.0",
+    "requests>=2.32.0",
+    "flask>=3.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+requires-python = ">=3.10,<3.13"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.2",
+    "pytest-asyncio>=0.23.7",
+    "pytest-cov>=4.1.0",
+]
+
+[project.optional-dependencies]
+lint = [
+    "ruff>=0.4.6",
+    "mypy>=1.15.0",
+    "types-requests>=2.32.0",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "C",   # flake8-comprehensions
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "RUF", # ruff specific rules
+]
+ignore = ["E501", "C901"] # ignore line too long, too complex
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent", "purple_baseline"]
+
+[tool.mypy]
+disallow_untyped_calls = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_unreachable = true
+follow_imports = "silent"
+ignore_missing_imports = true
+explicit_package_bases = true
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"

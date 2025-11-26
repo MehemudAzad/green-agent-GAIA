@@ -1,0 +1,55 @@
+# Docker Compose for Green GAIA Agent
+# Runs the evaluation with separate purple agent and green evaluator services
+
+version: '3.8'
+
+services:
+  # Purple Agent Mock Server
+  purple-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: gaia-purple-agent
+    ports:
+      - "8080:8080"
+    command: python -m purple_baseline.a2a_mock_server --host 0.0.0.0 --port 8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - gaia-network
+
+  # Green Evaluator Agent
+  green-evaluator:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: gaia-green-evaluator
+    depends_on:
+      purple-agent:
+        condition: service_healthy
+    volumes:
+      - ../results:/app/results
+    environment:
+      - PURPLE_AGENT_URL=http://purple-agent:8080
+      - DATA_DIR=/app/data/gaia
+      - RESULTS_DIR=/app/results
+      - RANDOM_SEED=42
+      - MAX_QUESTIONS=
+      - NUMERICAL_TOLERANCE=0.01
+      - TASK_TIMEOUT=60
+    command: >
+      python -m agent.evaluator
+      --data-dir /app/data/gaia
+      --purple-agent-url http://purple-agent:8080
+      --results-dir /app/results
+      --numerical-tolerance 0.01
+      --task-timeout 60
+    networks:
+      - gaia-network
+
+networks:
+  gaia-network:
+    driver: bridge

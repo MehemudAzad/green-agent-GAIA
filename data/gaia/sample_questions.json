@@ -1,0 +1,154 @@
+{
+  "questions": [
+    {
+      "id": "gaia_001",
+      "question": "What is 15 + 27?",
+      "gold_answer": "42",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "arithmetic",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_002",
+      "question": "How many continents are there on Earth?",
+      "gold_answer": "7",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "geography",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_003",
+      "question": "What is the capital of France?",
+      "gold_answer": "Paris",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "geography",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_004",
+      "question": "Calculate: 100 - 42",
+      "gold_answer": "58",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "arithmetic",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_005",
+      "question": "What is 12 × 8?",
+      "gold_answer": "96",
+      "metadata": {
+        "difficulty": "medium",
+        "topic": "arithmetic",
+        "level": 2
+      }
+    },
+    {
+      "id": "gaia_006",
+      "question": "Is the Earth flat?",
+      "gold_answer": "No",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "science",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_007",
+      "question": "What year did World War II end?",
+      "gold_answer": "1945",
+      "metadata": {
+        "difficulty": "medium",
+        "topic": "history",
+        "level": 2
+      }
+    },
+    {
+      "id": "gaia_008",
+      "question": "How many hours are in a day?",
+      "gold_answer": "24",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "time",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_009",
+      "question": "What is the square root of 144?",
+      "gold_answer": "12",
+      "metadata": {
+        "difficulty": "medium",
+        "topic": "mathematics",
+        "level": 2
+      }
+    },
+    {
+      "id": "gaia_010",
+      "question": "Calculate: 256 ÷ 16",
+      "gold_answer": "16",
+      "metadata": {
+        "difficulty": "medium",
+        "topic": "arithmetic",
+        "level": 2
+      }
+    },
+    {
+      "id": "gaia_011",
+      "question": "What is the chemical symbol for water?",
+      "gold_answer": "H2O",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "chemistry",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_012",
+      "question": "How many sides does a hexagon have?",
+      "gold_answer": "6",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "geometry",
+        "level": 1
+      }
+    },
+    {
+      "id": "gaia_013",
+      "question": "Is 17 a prime number?",
+      "gold_answer": "Yes",
+      "metadata": {
+        "difficulty": "medium",
+        "topic": "mathematics",
+        "level": 2
+      }
+    },
+    {
+      "id": "gaia_014",
+      "question": "What is 3.14159 rounded to two decimal places?",
+      "gold_answer": "3.14",
+      "metadata": {
+        "difficulty": "medium",
+        "topic": "mathematics",
+        "level": 2
+      }
+    },
+    {
+      "id": "gaia_015",
+      "question": "How many planets are in our solar system?",
+      "gold_answer": "8",
+      "metadata": {
+        "difficulty": "easy",
+        "topic": "astronomy",
+        "level": 1
+      }
+    }
+  ]
+}
