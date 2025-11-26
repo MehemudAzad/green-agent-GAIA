@@ -12,17 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Purple Baseline Agent: GAIA benchmark question answering agent."""
-
-import os
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
-
-from . import agent
-
-__all__ = ["agent"]
+"""Sub-agents for the Purple Advanced Agent system."""

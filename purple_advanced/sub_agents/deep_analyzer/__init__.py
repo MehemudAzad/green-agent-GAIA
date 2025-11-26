@@ -12,17 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Purple Baseline Agent: GAIA benchmark question answering agent."""
+"""Deep Analyzer Agent for complex reasoning and analysis."""
 
-import os
-from pathlib import Path
+from .agent import deep_analyzer_agent
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
-
-from . import agent
-
-__all__ = ["agent"]
+__all__ = ["deep_analyzer_agent"]

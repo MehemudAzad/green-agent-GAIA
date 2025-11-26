@@ -12,17 +12,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Purple Baseline Agent: GAIA benchmark question answering agent."""
+"""Deep Analyzer Agent for complex reasoning and multi-step problem solving."""
 
-import os
-from pathlib import Path
+from google.adk.agents import LlmAgent
 
-from dotenv import load_dotenv
+from . import prompt
 
-# Load environment variables from .env file
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
+MODEL = "gemini-2.5-pro"
 
-from . import agent
-
-__all__ = ["agent"]
+deep_analyzer_agent = LlmAgent(
+    model=MODEL,
+    name="deep_analyzer_agent",
+    description=(
+        "Performs in-depth analysis of complex problems, "
+        "breaks down multi-step reasoning tasks, and synthesizes "
+        "information to provide well-reasoned conclusions"
+    ),
+    instruction=prompt.DEEP_ANALYZER_PROMPT,
+    output_key="analysis_result",
+)

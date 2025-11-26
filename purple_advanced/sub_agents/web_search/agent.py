@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Purple Baseline Agent: GAIA benchmark question answering agent."""
+"""Web Search Agent for finding information online using Google Search."""
 
-import os
-from pathlib import Path
+from google.adk import Agent
+from google.adk.tools import google_search
 
-from dotenv import load_dotenv
+from . import prompt
 
-# Load environment variables from .env file
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
+MODEL = "gemini-2.5-pro"
 
-from . import agent
-
-__all__ = ["agent"]
+web_search_agent = Agent(
+    model=MODEL,
+    name="web_search_agent",
+    instruction=prompt.WEB_SEARCH_PROMPT,
+    output_key="search_results",
+    tools=[google_search],
+)

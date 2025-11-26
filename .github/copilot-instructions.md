@@ -175,4 +175,3 @@ Clean architecture
 
 Extensible so new benchmarks can be plugged in
 
-KISS but robust

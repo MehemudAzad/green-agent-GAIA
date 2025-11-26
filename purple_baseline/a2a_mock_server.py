@@ -12,24 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""A2A mock server for baseline purple agent."""
+"""A2A mock server for purple baseline agent."""
 
 import logging
-import sys
-import os
-from pathlib import Path
 from typing import Dict
+
 from flask import Flask, request, jsonify
 
-# Add parent directory to path to import baseline_agent
-sys.path.insert(0, str(Path(__file__).parent))
-from baseline_agent import BaselinePurpleAgent
+from .agent import PurpleBaselineAgent
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
+# Initialize Flask app and agent
 app = Flask(__name__)
-agent = BaselinePurpleAgent()
+agent = PurpleBaselineAgent()
 
 # In-memory storage for tasks and responses
 tasks: Dict[str, dict] = {}

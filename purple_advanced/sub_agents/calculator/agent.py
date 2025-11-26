@@ -12,17 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Purple Baseline Agent: GAIA benchmark question answering agent."""
+"""Calculator Agent for mathematical computations."""
 
-import os
-from pathlib import Path
+from google.adk import Agent
+from google.adk.tools import code_interpreter
 
-from dotenv import load_dotenv
+from . import prompt
 
-# Load environment variables from .env file
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
+MODEL = "gemini-2.5-pro"
 
-from . import agent
-
-__all__ = ["agent"]
+calculator_agent = Agent(
+    model=MODEL,
+    name="calculator_agent",
+    instruction=prompt.CALCULATOR_PROMPT,
+    output_key="calculation_result",
+    tools=[code_interpreter],
+)

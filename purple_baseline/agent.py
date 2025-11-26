@@ -12,36 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Baseline purple agent using LLM for answering questions."""
+"""Purple Baseline Agent: GAIA benchmark question answering using Gemini."""
 
 import logging
 import os
-from pathlib import Path
 from typing import Any, Dict, Optional
-from dotenv import load_dotenv
+
 from google import genai
 from google.genai import types
 
-# Load .env file from project root
-env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
+from . import prompt
 
-logging.basicConfig(level=logging.INFO)
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
+# Model configuration
+MODEL = "gemini-2.5-pro"
+MAX_OUTPUT_TOKENS = 8192  # Increased to accommodate extended thinking
+TEMPERATURE = 0.1
 
-class BaselinePurpleAgent:
-    """Purple agent that uses Google Gemini LLM to answer questions."""
+
+class PurpleBaselineAgent:
+    """Purple agent that uses Google Gemini LLM to answer GAIA questions."""
     
-    def __init__(self, api_key: Optional[str] = None, model_name: str = "gemini-2.5-pro"):
-        """Initialize the baseline agent with LLM.
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model_name: str = MODEL,
+        max_tokens: int = MAX_OUTPUT_TOKENS,
+        temperature: float = TEMPERATURE
+    ):
+        """Initialize the purple baseline agent.
         
         Args:
             api_key: Google API key. If None, reads from GOOGLE_API_KEY env var
-            model_name: Gemini model to use (default: gemini-2.5-pro)
+            model_name: Gemini model to use
+            max_tokens: Maximum tokens for output
+            temperature: Temperature for generation
         """
-        self.name = "baseline_purple_agent_llm"
+        self.name = "purple_baseline_agent"
         self.model_name = model_name
+        self.max_tokens = max_tokens
+        self.temperature = temperature
         
         # Get API key from parameter or environment
         self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
@@ -51,16 +67,20 @@ class BaselinePurpleAgent:
         else:
             try:
                 self.client = genai.Client(api_key=self.api_key)
-                logger.info(f"Initialized {self.name} with model {self.model_name}")
+                logger.info(
+                    f"Initialized {self.name} with model {self.model_name} "
+                    f"(max_tokens={self.max_tokens}, temperature={self.temperature})"
+                )
             except Exception as e:
                 logger.error(f"Failed to initialize GenAI client: {e}")
                 self.client = None
     
-    def answer_question(self, question: str, metadata: Dict[str, Any] | None = None) -> str:
+    def answer_question(
+        self,
+        question: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
         """Generate an answer to a question using LLM.
-        
-        This agent uses Google Gemini to answer questions. If the LLM is unavailable,
-        it falls back to a simple heuristic mode.
         
         Args:
             question: The question to answer
@@ -69,7 +89,7 @@ class BaselinePurpleAgent:
         Returns:
             Answer string
         """
-        logger.info(f"Answering question: {question[:100]}...")
+        logger.info(f"Processing question: {question[:100]}...")
         
         # Try LLM first
         if self.client:
@@ -83,7 +103,11 @@ class BaselinePurpleAgent:
         # Fallback to heuristics
         return self._fallback_answer(question)
     
-    def _answer_with_llm(self, question: str, metadata: Dict[str, Any] | None = None) -> str:
+    def _answer_with_llm(
+        self,
+        question: str,
+        metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
         """Answer question using the LLM.
         
         Args:
@@ -94,32 +118,13 @@ class BaselinePurpleAgent:
             LLM-generated answer
         """
         # Build system prompt
-        system_prompt = """You are a helpful assistant answering questions from the GAIA benchmark.
-        
-CRITICAL INSTRUCTIONS:
-1. Provide ONLY the final answer - no explanations, no reasoning, no additional text
-2. Be as concise as possible
-3. For yes/no questions, answer ONLY "Yes" or "No"
-4. For numerical answers, provide ONLY the number
-5. For names/places, provide ONLY the name/place
-6. Do NOT include phrases like "The answer is" or "According to"
-7. Your response should be directly usable as the answer
-
-Examples:
-Question: "What is 2+2?"
-Answer: "4"
-
-Question: "Is Paris the capital of France?"
-Answer: "Yes"
-
-Question: "Who wrote Hamlet?"
-Answer: "William Shakespeare"
-"""
+        system_prompt = prompt.GAIA_AGENT_PROMPT
         
         # Add metadata context if available
         if metadata:
             difficulty = metadata.get("difficulty", "unknown")
-            system_prompt += f"\n\nQuestion difficulty: {difficulty}"
+            level = metadata.get("level", "unknown")
+            system_prompt += f"\n\nQuestion difficulty: {difficulty} (Level {level})"
         
         try:
             # Generate response
@@ -128,8 +133,8 @@ Answer: "William Shakespeare"
                 contents=question,
                 config=types.GenerateContentConfig(
                     system_instruction=system_prompt,
-                    temperature=0.1,  # Low temperature for more deterministic answers
-                    max_output_tokens=2048,  # Increased to account for extended thinking tokens
+                    temperature=self.temperature,
+                    max_output_tokens=self.max_tokens,
                 )
             )
             
@@ -137,22 +142,28 @@ Answer: "William Shakespeare"
             if response and response.text:
                 answer = response.text.strip()
                 # Remove common prefixes that might slip through
-                for prefix in ["The answer is ", "Answer: ", "A: "]:
+                for prefix in ["The answer is ", "Answer: ", "A: ", "Response: "]:
                     if answer.startswith(prefix):
                         answer = answer[len(prefix):].strip()
                 return answer
             else:
                 # Log detailed response info for debugging
-                logger.warning(f"Empty response from LLM. Response object: {response}")
+                logger.warning(f"Empty response from LLM")
                 if hasattr(response, 'candidates') and response.candidates:
-                    logger.warning(f"Candidates: {response.candidates}")
-                if hasattr(response, 'prompt_feedback'):
-                    logger.warning(f"Prompt feedback: {response.prompt_feedback}")
+                    candidate = response.candidates[0]
+                    logger.warning(f"Finish reason: {candidate.finish_reason}")
+                if hasattr(response, 'usage_metadata'):
+                    usage = response.usage_metadata
+                    logger.warning(
+                        f"Token usage - Prompt: {usage.prompt_token_count}, "
+                        f"Thoughts: {getattr(usage, 'thoughts_token_count', 0)}, "
+                        f"Total: {usage.total_token_count}"
+                    )
                 return "Unable to generate answer"
                 
         except Exception as e:
             logger.error(f"Error calling LLM: {type(e).__name__}: {e}")
-            return "Unable to generate answer"
+            raise
     
     def _fallback_answer(self, question: str) -> str:
         """Fallback heuristic answering when LLM is unavailable.
@@ -163,10 +174,11 @@ Answer: "William Shakespeare"
         Returns:
             Heuristic answer
         """
+        logger.info("Using fallback heuristic mode")
         question_lower = question.lower()
         
         # Yes/No questions
-        if any(q in question_lower for q in ["is it", "are there", "does it", "do they", "can you"]):
+        if any(q in question_lower for q in ["is it", "are there", "does it", "do they", "can you", "is "]):
             if "not" in question_lower or "never" in question_lower:
                 return "No"
             return "Yes"
@@ -191,9 +203,13 @@ Answer: "William Shakespeare"
         return "I don't know"
 
 
+# Create the root agent instance
+root_agent = PurpleBaselineAgent()
+
+
 def main() -> None:
     """Test the baseline agent with sample questions."""
-    agent = BaselinePurpleAgent()
+    agent = PurpleBaselineAgent()
     
     test_questions = [
         "What is 2 + 2?",
@@ -204,16 +220,16 @@ def main() -> None:
         "Where is the Eiffel Tower located?",
     ]
     
-    print("\n" + "=" * 60)
-    print("BASELINE PURPLE AGENT TEST")
-    print("=" * 60)
+    print("\n" + "=" * 70)
+    print("PURPLE BASELINE AGENT TEST")
+    print("=" * 70)
     
     for question in test_questions:
         answer = agent.answer_question(question)
         print(f"\nQ: {question}")
         print(f"A: {answer}")
     
-    print("\n" + "=" * 60)
+    print("\n" + "=" * 70)
 
 
 if __name__ == "__main__":

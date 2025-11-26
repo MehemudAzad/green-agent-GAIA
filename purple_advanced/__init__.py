@@ -12,17 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Purple Baseline Agent: GAIA benchmark question answering agent."""
+"""Purple Advanced Agent: Hierarchical multi-agent system for GAIA benchmark.
+
+This package implements a sophisticated purple agent with specialized sub-agents:
+- Web Search Agent: Finds information online
+- Deep Analyzer Agent: Analyzes complex multi-step problems
+- Calculator Agent: Performs mathematical computations
+
+The architecture follows the DeepResearchAgent pattern with a coordinator
+that orchestrates specialized sub-agents.
+"""
 
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
+# Load environment variables from .env file in parent directory
 env_path = Path(__file__).parent.parent / ".env"
-load_dotenv(env_path)
+if env_path.exists():
+    load_dotenv(env_path)
 
 from . import agent
+from .agent import root_agent, gaia_coordinator
 
-__all__ = ["agent"]
+__all__ = ["agent", "root_agent", "gaia_coordinator"]

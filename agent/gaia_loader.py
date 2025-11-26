@@ -16,13 +16,26 @@
 
 import json
 import pathlib
-from typing import List
+from typing import List, Optional
 
 from .schemas import GAIAQuestion
 
 
 class GAIALoader:
-    """Loads and normalizes GAIA benchmark questions from JSON files."""
+    """Loads and normalizes GAIA benchmark questions from JSON files.
+    
+    The loader expects JSON files in the format:
+    {
+        "questions": [
+            {
+                "id": "task_id",
+                "question": "question text",
+                "gold_answer": "expected answer",
+                "metadata": {...}
+            }
+        ]
+    }
+    """
     
     def __init__(self, data_dir: str | pathlib.Path):
         """Initialize the GAIA loader.
@@ -34,11 +47,16 @@ class GAIALoader:
         if not self.data_dir.exists():
             raise ValueError(f"Data directory does not exist: {self.data_dir}")
     
-    def load_questions(self, filename: str = "sample_questions.json") -> List[GAIAQuestion]:
+    def load_questions(
+        self, 
+        filename: str = "validation_complete.json",
+        level: Optional[int] = None
+    ) -> List[GAIAQuestion]:
         """Load questions from a JSON file.
         
         Args:
             filename: Name of the JSON file to load
+            level: Optional difficulty level filter (1, 2, or 3)
             
         Returns:
             List of GAIAQuestion objects
@@ -67,6 +85,12 @@ class GAIALoader:
         
         for item in questions_data:
             question = self._normalize_question(item)
+            
+            # Apply level filter if specified
+            if level is not None:
+                if question.metadata.get("level") != level:
+                    continue
+            
             questions.append(question)
         
         return questions
@@ -81,24 +105,22 @@ class GAIALoader:
             Normalized GAIAQuestion object
         """
         # Extract required fields
-        question_id = item.get("id") or item.get("question_id") or str(hash(item.get("question", "")))
-        question_text = item.get("question") or item.get("query") or ""
-        gold_answer = item.get("gold_answer") or item.get("answer") or item.get("ground_truth") or ""
+        question_id = item.get("id", "")
+        question_text = item.get("question", "")
+        gold_answer = item.get("gold_answer", "")
         
-        # Extract metadata
-        metadata = {}
-        if "difficulty" in item:
-            metadata["difficulty"] = item["difficulty"]
-        if "topic" in item:
-            metadata["topic"] = item["topic"]
-        if "level" in item:
-            metadata["level"] = item["level"]
-        
-        # Add any extra fields to metadata
-        excluded_keys = {"id", "question_id", "question", "query", "gold_answer", "answer", "ground_truth"}
-        for key, value in item.items():
-            if key not in excluded_keys and key not in metadata:
-                metadata[key] = value
+        # Extract or merge metadata
+        if "metadata" in item:
+            metadata = dict(item["metadata"])
+        else:
+            metadata = {}
+            # Legacy format support
+            if "difficulty" in item:
+                metadata["difficulty"] = item["difficulty"]
+            if "topic" in item:
+                metadata["topic"] = item["topic"]
+            if "level" in item:
+                metadata["level"] = item["level"]
         
         return GAIAQuestion(
             id=question_id,
@@ -107,11 +129,31 @@ class GAIALoader:
             metadata=metadata
         )
     
+    def load_by_level(self, level: int) -> List[GAIAQuestion]:
+        """Load questions for a specific difficulty level.
+        
+        Args:
+            level: Difficulty level (1, 2, or 3)
+            
+        Returns:
+            List of questions for the specified level
+        """
+        if level not in [1, 2, 3]:
+            raise ValueError(f"Invalid level: {level}. Must be 1, 2, or 3.")
+        
+        # Try to load from level-specific file first
+        level_file = f"validation_level{level}.json"
+        if (self.data_dir / level_file).exists():
+            return self.load_questions(level_file)
+        
+        # Fall back to filtering from complete dataset
+        return self.load_questions(level=level)
+    
     def get_questions_by_difficulty(self, difficulty: str) -> List[GAIAQuestion]:
         """Filter questions by difficulty level.
         
         Args:
-            difficulty: Difficulty level to filter by
+            difficulty: Difficulty level string (e.g., "level1", "level2", "level3")
             
         Returns:
             List of questions matching the difficulty
@@ -122,17 +164,36 @@ class GAIALoader:
             if q.metadata.get("difficulty") == difficulty
         ]
     
-    def get_questions_by_topic(self, topic: str) -> List[GAIAQuestion]:
-        """Filter questions by topic.
+    def get_questions_with_files(self) -> List[GAIAQuestion]:
+        """Get questions that require file attachments.
         
-        Args:
-            topic: Topic to filter by
-            
         Returns:
-            List of questions matching the topic
+            List of questions that have file_name or file_path in metadata
         """
         all_questions = self.load_questions()
         return [
             q for q in all_questions 
-            if q.metadata.get("topic") == topic
+            if q.metadata.get("file_name") or q.metadata.get("file_path")
         ]
+    
+    def get_statistics(self) -> dict:
+        """Get statistics about the loaded dataset.
+        
+        Returns:
+            Dictionary with dataset statistics
+        """
+        all_questions = self.load_questions()
+        
+        stats = {
+            "total": len(all_questions),
+            "by_level": {},
+            "with_files": 0
+        }
+        
+        for level in [1, 2, 3]:
+            level_questions = [q for q in all_questions if q.metadata.get("level") == level]
+            stats["by_level"][level] = len(level_questions)
+        
+        stats["with_files"] = len(self.get_questions_with_files())
+        
+        return stats

@@ -20,7 +20,7 @@ The system is built using the **Google Agent Developer Kit (ADK)** and follows c
 ✅ **Reproducibility** - Fixed random seeds, no external API calls (except A2A)  
 ✅ **Google ADK** - State-of-the-art agent orchestration  
 ✅ **Docker Support** - Fully containerized with docker-compose  
-✅ **Baseline Purple Agent** - Reference implementation included  
+✅ **Two Purple Agent Implementations** - Baseline and Advanced with sub-agents  
 ✅ **Comprehensive Testing** - Unit and integration tests  
 
 ## Architecture
@@ -34,13 +34,27 @@ green-gaia-agent/
 │   ├── a2a_protocol.py        # A2A HTTP protocol client
 │   ├── scoring.py             # Deterministic scoring logic
 │   └── schemas.py             # Pydantic data models
-├── purple_baseline/            # Baseline purple agent
+├── purple_baseline/            # Baseline purple agent (single LLM)
 │   ├── __init__.py
-│   ├── baseline_agent.py      # Simple heuristic agent
+│   ├── agent.py               # LLM-based agent
+│   ├── prompt.py              # System prompts
 │   └── a2a_mock_server.py     # A2A HTTP server
+├── purple_advanced/            # Advanced purple agent (multi-agent)
+│   ├── __init__.py
+│   ├── agent.py               # GAIA coordinator
+│   ├── prompt.py              # Coordinator prompts
+│   ├── a2a_server.py          # A2A HTTP server
+│   └── sub_agents/            # Specialized sub-agents
+│       ├── web_search/        # Google Search integration
+│       ├── deep_analyzer/     # Complex reasoning
+│       └── calculator/        # Math computations
 ├── data/
 │   └── gaia/
-│       └── sample_questions.json  # GAIA benchmark questions
+│       ├── sample_questions.json       # Sample questions
+│       ├── validation_complete.json    # Full validation set (466 questions)
+│       ├── validation_level1.json      # Easy questions
+│       ├── validation_level2.json      # Medium questions
+│       └── validation_level3.json      # Hard questions
 ├── tests/                      # Test suite
 │   ├── test_scoring.py
 │   ├── test_loader.py
@@ -86,6 +100,43 @@ export GOOGLE_CLOUD_PROJECT=your-project-id
 export GOOGLE_CLOUD_LOCATION=us-central1
 ```
 
+## Purple Agent Implementations
+
+This project includes **two purple agent implementations**:
+
+### 1. Baseline Purple Agent (`purple_baseline/`)
+
+A simple LLM-based agent for testing and baseline measurement:
+- Single Gemini 2.5 Pro model
+- Direct prompting without tools
+- Fast responses (~2-5 seconds)
+- Expected accuracy: 2-5% on GAIA
+- **Use for**: Infrastructure testing, baseline comparison
+
+```bash
+# Start baseline agent
+python -m purple_baseline.a2a_mock_server
+# Runs on port 8080
+```
+
+### 2. Advanced Purple Agent (`purple_advanced/`)
+
+A hierarchical multi-agent system following the DeepResearchAgent pattern:
+- GAIA Coordinator orchestrates specialized sub-agents
+- **Web Search Agent**: Google Search for current information
+- **Deep Analyzer Agent**: Complex multi-step reasoning
+- **Calculator Agent**: Mathematical computations with code interpreter
+- Expected accuracy: 50-60% on GAIA
+- **Use for**: Production evaluation, competitive performance
+
+```bash
+# Start advanced agent
+python -m purple_advanced.a2a_server
+# Runs on port 8081
+```
+
+For detailed comparison, see [PURPLE_AGENTS_COMPARISON.md](./PURPLE_AGENTS_COMPARISON.md)
+
 ## Usage
 
 ### Quick Start with Docker Compose
@@ -105,21 +156,32 @@ This will:
 
 ### Manual Execution
 
-#### Step 1: Start the Purple Agent
+#### Step 1: Start a Purple Agent
 
-In one terminal:
+**Option A: Baseline Agent**
 ```bash
 python -m purple_baseline.a2a_mock_server --host 0.0.0.0 --port 8080
 ```
 
+**Option B: Advanced Agent**
+```bash
+python -m purple_advanced.a2a_server
+```
+
 #### Step 2: Run the Evaluator
 
-In another terminal:
 ```bash
+# Evaluate baseline agent
 python -m agent.evaluator \
   --data-dir data/gaia \
   --purple-agent-url http://localhost:8080 \
   --results-dir results
+
+# Evaluate advanced agent
+python -m agent.evaluator \
+  --data-dir data/gaia \
+  --purple-agent-url http://localhost:8081 \
+  --results-dir results/advanced
 ```
 
 ### Command-Line Options
@@ -331,20 +393,45 @@ pytest tests/ --cov=agent --cov=purple_baseline --cov-report=html
 
 ## Baseline Purple Agent
 
-The included baseline agent uses simple heuristics:
+The included baseline agent uses **Google Gemini LLM** (gemini-2.0-flash-exp) to answer questions intelligently:
 
-- **Yes/No questions**: Pattern matching
-- **Counting questions**: Default guesses
-- **Arithmetic**: Basic calculation
-- **Knowledge questions**: Default responses
+- **LLM-Powered**: Uses Google's Gemini model for reasoning
+- **Fallback Mode**: Simple heuristics if API key is not provided
+- **A2A Compatible**: Implements the full A2A protocol
+- **Configurable**: Supports different Gemini models
 
-**Note**: This is for demonstration only. Real purple agents should use sophisticated reasoning.
+### Setup
+
+1. **Get a Google API Key**:
+   - Visit https://aistudio.google.com/apikey
+   - Create a new API key
+
+2. **Configure environment**:
+```bash
+cp .env.example .env
+# Edit .env and set GOOGLE_API_KEY=your-key-here
+```
+
+3. **Start the purple agent server**:
+```bash
+python -m purple_baseline.a2a_mock_server --port 8080
+```
 
 ### Test Baseline Agent
 
+Test directly without server:
 ```bash
 python -m purple_baseline.baseline_agent
 ```
+
+### Fallback Mode
+
+If no API key is provided, the agent falls back to simple heuristics:
+- **Yes/No questions**: Pattern matching
+- **Counting questions**: Default guesses
+- **Knowledge questions**: Default responses
+
+**Note**: For best results with GAIA benchmark, use the LLM mode with a valid API key.
 
 ## Development
 
