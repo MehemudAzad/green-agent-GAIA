@@ -31,8 +31,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Model configuration
-MODEL = "gemini-2.5-pro"
-MAX_OUTPUT_TOKENS = 8192  # Increased to accommodate extended thinking
+MODEL = "gemini-2.0-flash-exp"
+MAX_OUTPUT_TOKENS = 2048
 TEMPERATURE = 0.1
 
 

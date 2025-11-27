@@ -14,17 +14,19 @@
 
 """Calculator Agent for mathematical computations."""
 
-from google.adk import Agent
-from google.adk.tools import code_interpreter
+from google.adk.agents import LlmAgent
 
 from . import prompt
 
 MODEL = "gemini-2.5-pro"
 
-calculator_agent = Agent(
+calculator_agent = LlmAgent(
     model=MODEL,
     name="calculator_agent",
+    description=(
+        "Performs mathematical computations, arithmetic operations, "
+        "unit conversions, and numerical analysis"
+    ),
     instruction=prompt.CALCULATOR_PROMPT,
     output_key="calculation_result",
-    tools=[code_interpreter],
 )
