@@ -1,18 +1,15 @@
 [project]
 name = "green-gaia-agent"
 version = "0.1.0"
-description = "Green Agent (Evaluator) for GAIA benchmark using A2A protocol and Google ADK"
+description = "Green Agent (Evaluator) for GAIA benchmark using A2A protocol and a2a-sdk"
 authors = [{ name = "AgentBeats Team" }]
 license = "Apache-2.0"
 readme = "README.md"
 dependencies = [
-    "google-cloud-aiplatform[adk,agent-engines]>=1.93.0",
-    "google-genai>=1.9.0",
-    "google-adk>=1.0.0",
-    "pydantic>=2.10.0",
-    "requests>=2.32.0",
-    "flask>=3.0.0",
-    "python-dotenv>=1.0.0",
+    "a2a-sdk>=0.3.5",
+    "httpx>=0.28.0",
+    "pydantic>=2.11.9",
+    "python-dotenv>=1.1.1",
 ]
 
 requires-python = ">=3.10,<3.13"

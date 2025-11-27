@@ -19,15 +19,27 @@ import logging
 import os
 import pathlib
 import random
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from uuid import uuid4
+import asyncio
 
-from google.adk.agents import SequentialAgent, LlmAgent
-from google.adk.agents.callback_context import CallbackContext
+import httpx
+from a2a.client import (
+    A2ACardResolver,
+    ClientConfig,
+    ClientFactory,
+)
+from a2a.types import (
+    Message,
+    Part,
+    Role,
+    TextPart,
+    DataPart,
+)
 
-from .a2a_protocol import A2AProtocol
 from .gaia_loader import GAIALoader
-from .schemas import A2ATask, EvaluationResult, EvaluationSummary
+from .schemas import EvaluationResult, EvaluationSummary
 from .scoring import GAIAScorer
 
 logging.basicConfig(
@@ -56,7 +68,7 @@ class GAIAEvaluator:
         
         Args:
             data_dir: Directory containing GAIA questions
-            purple_agent_url: Base URL of the purple agent
+            purple_agent_url: Base URL of the purple agent (e.g., http://localhost:8080)
             results_dir: Directory to save evaluation results
             numerical_tolerance: Tolerance for numerical comparisons
             task_timeout: Timeout for each task in seconds
@@ -66,20 +78,111 @@ class GAIAEvaluator:
         self.results_dir.mkdir(parents=True, exist_ok=True)
         
         self.loader = GAIALoader(data_dir)
-        self.protocol = A2AProtocol(purple_agent_url, timeout=task_timeout)
         self.scorer = GAIAScorer(numerical_tolerance=numerical_tolerance)
+        self.task_timeout = task_timeout
+        self.purple_agent_url = purple_agent_url
+        
+        # Initialize httpx client and A2A client (will be set up async)
+        self.httpx_client: Optional[httpx.AsyncClient] = None
+        self.a2a_client = None  # Will be created by ClientFactory
+        
+        logger.info(f"Will connect to purple agent at: {purple_agent_url}")
         
         logger.info(f"Initialized GAIA Evaluator")
         logger.info(f"Data directory: {self.data_dir}")
         logger.info(f"Purple agent URL: {purple_agent_url}")
         logger.info(f"Results directory: {self.results_dir}")
     
-    def run_evaluation(
+    async def _setup_client(self) -> None:
+        """Setup async httpx client and A2A client using ClientFactory."""
+        if self.a2a_client is not None:
+            return  # Already initialized
+            
+        logger.info("Setting up A2A client...")
+        self.httpx_client = httpx.AsyncClient(timeout=self.task_timeout)
+        
+        # Fetch agent card
+        resolver = A2ACardResolver(
+            httpx_client=self.httpx_client,
+            base_url=self.purple_agent_url,
+        )
+        
+        agent_card = await resolver.get_agent_card()
+        logger.info(f"Successfully fetched agent card: {agent_card.name}")
+        
+        # Create A2A client using ClientFactory
+        config = ClientConfig(
+            httpx_client=self.httpx_client,
+            streaming=False,  # We'll use non-streaming for simplicity
+        )
+        factory = ClientFactory(config)
+        self.a2a_client = factory.create(agent_card)
+        logger.info("A2A client initialized successfully")
+    
+    async def _send_question(self, question_text: str) -> str:
+        """Send a question to the purple agent via A2A.
+        
+        Args:
+            question_text: The question to send
+            
+        Returns:
+            The agent's response text
+        """
+        if self.a2a_client is None:
+            await self._setup_client()
+        
+        # Create message using Message class
+        outbound_msg = Message(
+            kind="message",
+            role=Role.user,
+            parts=[Part(TextPart(kind="text", text=question_text))],
+            message_id=uuid4().hex,
+        )
+        
+        # Send message and collect events
+        last_event = None
+        response_text = ""
+        
+        async for event in self.a2a_client.send_message(outbound_msg):
+            last_event = event
+        
+        # Extract text from the last event
+        if isinstance(last_event, Message):
+            # Direct message response
+            for part in last_event.parts:
+                if isinstance(part.root, TextPart):
+                    response_text += part.root.text
+                elif isinstance(part.root, DataPart):
+                    response_text += part.root.data
+        elif isinstance(last_event, tuple) and len(last_event) == 2:
+            # Task response (task, update)
+            task, update = last_event
+            if task.status and task.status.message:
+                for part in task.status.message.parts:
+                    if isinstance(part.root, TextPart):
+                        response_text += part.root.text
+                    elif isinstance(part.root, DataPart):
+                        response_text += part.root.data
+            # Also check artifacts
+            if task.artifacts:
+                for artifact in task.artifacts:
+                    for part in artifact.parts:
+                        if isinstance(part.root, TextPart):
+                            response_text += part.root.text
+                        elif isinstance(part.root, DataPart):
+                            response_text += part.root.data
+        
+        if not response_text:
+            logger.warning("No text found in response")
+        
+        return response_text.strip()
+    
+    async def run_evaluation_async(
         self, 
         filename: str = "sample_questions.json",
         max_questions: Optional[int] = None
     ) -> EvaluationSummary:
-        """Run full evaluation on GAIA questions.
+        """Run full evaluation on GAIA questions (async).
         
         Args:
             filename: Name of the questions file to load
@@ -90,10 +193,6 @@ class GAIAEvaluator:
         """
         logger.info(f"Starting evaluation with file: {filename}")
         
-        # Check purple agent health
-        if not self.protocol.health_check():
-            logger.warning("Purple agent health check failed - proceeding anyway")
-        
         # Load questions
         questions = self.loader.load_questions(filename)
         if max_questions:
@@ -101,26 +200,19 @@ class GAIAEvaluator:
         
         logger.info(f"Loaded {len(questions)} questions")
         
-        # Evaluate each question
+        # Evaluate each question using a2a-sdk
         results = []
         for idx, question in enumerate(questions):
             logger.info(f"Evaluating question {idx + 1}/{len(questions)}: {question.id}")
             
-            # Create A2A task
-            task = A2ATask(
-                task_id=question.id,
-                question=question.question,
-                metadata=question.metadata
-            )
-            
-            # Send task and receive response
-            response = self.protocol.send_and_receive(task)
-            
-            if response is None:
-                logger.error(f"No response received for task {task.task_id}")
+            try:
+                logger.debug("Sending question to purple agent via A2A")
+                predicted_answer = await self._send_question(question.question)
+                logger.debug(f"Received response: {predicted_answer[:100] if predicted_answer else 'empty'}...")
+                
+            except Exception as e:
+                logger.error(f"Error calling purple agent for task {question.id}: {e}", exc_info=True)
                 predicted_answer = ""
-            else:
-                predicted_answer = response.answer
             
             # Score the answer
             score, exact_match, normalized_match = self.scorer.score(
@@ -166,7 +258,7 @@ class GAIAEvaluator:
             results=results,
             metadata={
                 "filename": filename,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "random_seed": RANDOM_SEED,
                 "numerical_tolerance": self.scorer.numerical_tolerance
             }
@@ -183,6 +275,22 @@ class GAIAEvaluator:
         
         return summary
     
+    def run_evaluation(
+        self, 
+        filename: str = "sample_questions.json",
+        max_questions: Optional[int] = None
+    ) -> EvaluationSummary:
+        """Run full evaluation on GAIA questions (sync wrapper).
+        
+        Args:
+            filename: Name of the questions file to load
+            max_questions: Maximum number of questions to evaluate (None for all)
+            
+        Returns:
+            EvaluationSummary with results and metrics
+        """
+        return asyncio.run(self.run_evaluation_async(filename, max_questions))
+    
     def save_results(self, summary: EvaluationSummary, filename: str = "summary.json") -> None:
         """Save evaluation results to JSON file.
         
@@ -197,9 +305,33 @@ class GAIAEvaluator:
         
         logger.info(f"Results saved to {output_path}")
     
+    async def cleanup_async(self) -> None:
+        """Cleanup resources async."""
+        if self.httpx_client:
+            try:
+                await self.httpx_client.aclose()
+                logger.info("Closed httpx client")
+            except RuntimeError as e:
+                # Event loop already closed, ignore
+                if "Event loop is closed" not in str(e):
+                    raise
+    
     def cleanup(self) -> None:
-        """Cleanup resources."""
-        self.protocol.close()
+        """Cleanup resources (sync wrapper)."""
+        if self.httpx_client:
+            try:
+                # Check if there's already a running event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # We're inside an async context, schedule cleanup
+                    loop.create_task(self.cleanup_async())
+                else:
+                    # No running loop, safe to use asyncio.run
+                    asyncio.run(self.cleanup_async())
+            except RuntimeError:
+                # Event loop is closed or doesn't exist, that's fine
+                logger.info("Cleanup skipped (event loop unavailable)")
+        logger.info("Cleanup complete")
 
 
 def run_evaluation_cli() -> None:

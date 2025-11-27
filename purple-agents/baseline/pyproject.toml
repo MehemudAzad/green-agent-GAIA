@@ -3,16 +3,16 @@ requires = ["setuptools>=65.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "purple-advanced-gaia-agent"
+name = "purple-baseline-gaia-agent"
 version = "0.1.0"
-description = "Hierarchical multi-agent system for GAIA benchmark evaluation"
+description = "Baseline purple agent for GAIA benchmark evaluation"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "Apache-2.0"}
 authors = [
     {name = "Your Name", email = "your.email@example.com"}
 ]
-keywords = ["gaia", "agent", "adk", "benchmark", "multi-agent"]
+keywords = ["gaia", "agent", "adk", "benchmark"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -21,10 +21,12 @@ classifiers = [
 ]
 
 dependencies = [
-    "google-adk[a2a]>=0.1.0",
-    "google-genai>=1.0.0",
-    "uvicorn>=0.27.0",
-    "python-dotenv>=1.0.0",
+    "a2a-sdk>=0.3.5",
+    "google-adk>=1.14.1",
+    "google-genai>=1.36.0",
+    "pydantic>=2.11.9",
+    "python-dotenv>=1.1.1",
+    "uvicorn>=0.35.0",
 ]
 
 [project.optional-dependencies]
@@ -36,7 +38,7 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["purple_advanced*"]
+include = ["purple_baseline*"]
 
 [tool.black]
 line-length = 100

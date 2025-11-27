@@ -12,14 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Purple Baseline Agent: GAIA benchmark question answering using Gemini."""
+"""Purple Baseline Agent: GAIA benchmark question answering using ADK Agent."""
 
 import logging
 import os
 from typing import Any, Dict, Optional
 
-from google import genai
+from google.adk.agents import Agent
 from google.genai import types
+import google.genai as genai
 
 from . import prompt
 
@@ -35,7 +36,43 @@ MODEL = "gemini-2.0-flash-exp"
 MAX_OUTPUT_TOKENS = 2048
 TEMPERATURE = 0.1
 
+# Agent instructions
+BASELINE_AGENT_INSTRUCTION = """You are a helpful assistant answering questions from the GAIA benchmark.
 
+CRITICAL INSTRUCTIONS:
+1. Provide ONLY the final answer - no explanations, no reasoning, no additional text
+2. Be as concise as possible
+3. For yes/no questions, answer ONLY "Yes" or "No"
+4. For numerical answers, provide ONLY the number
+5. For names/places, provide ONLY the name/place
+6. Do NOT include phrases like "The answer is" or "According to"
+7. Your response should be directly usable as the answer
+
+Examples:
+Question: "What is 2+2?"
+Answer: "4"
+
+Question: "Is Paris the capital of France?"
+Answer: "Yes"
+
+Question: "Who wrote Hamlet?"
+Answer: "William Shakespeare"
+"""
+
+# Create ADK Agent for baseline
+baseline_agent = Agent(
+    model=MODEL,
+    name="baseline_purple_agent",
+    description="A baseline agent that answers GAIA benchmark questions using a single LLM without specialized tools",
+    instruction=BASELINE_AGENT_INSTRUCTION,
+    generate_content_config=types.GenerateContentConfig(
+        temperature=TEMPERATURE,
+        max_output_tokens=MAX_OUTPUT_TOKENS,
+    )
+)
+
+
+# Legacy class for backward compatibility (if needed)
 class PurpleBaselineAgent:
     """Purple agent that uses Google Gemini LLM to answer GAIA questions."""
     
@@ -203,13 +240,13 @@ class PurpleBaselineAgent:
         return "I don't know"
 
 
-# Create the root agent instance
+# Create legacy root agent instance for backward compatibility
 root_agent = PurpleBaselineAgent()
 
 
 def main() -> None:
-    """Test the baseline agent with sample questions."""
-    agent = PurpleBaselineAgent()
+    """Test the baseline agent with sample questions using ADK runtime."""
+    from google.adk.runtime import run_sync
     
     test_questions = [
         "What is 2 + 2?",
@@ -221,13 +258,18 @@ def main() -> None:
     ]
     
     print("\n" + "=" * 70)
-    print("PURPLE BASELINE AGENT TEST")
+    print("PURPLE BASELINE AGENT TEST (ADK)")
     print("=" * 70)
     
     for question in test_questions:
-        answer = agent.answer_question(question)
-        print(f"\nQ: {question}")
-        print(f"A: {answer}")
+        try:
+            response = run_sync(baseline_agent, question)
+            answer = response.text.strip()
+            print(f"\nQ: {question}")
+            print(f"A: {answer}")
+        except Exception as e:
+            print(f"\nQ: {question}")
+            print(f"A: Error - {e}")
     
     print("\n" + "=" * 70)
 
