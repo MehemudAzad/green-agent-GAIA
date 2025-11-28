@@ -66,6 +66,10 @@ class EvaluationResult(BaseModel):
         default_factory=dict,
         description="Additional evaluation metadata"
     )
+    llm_evaluation: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="LLM-powered evaluation details (if enabled)"
+    )
 
 
 class EvaluationSummary(BaseModel):
