@@ -2,6 +2,26 @@
 
 A production-quality evaluator for the AgentX–AgentBeats Competition that evaluates A2A-compatible purple agents on the GAIA benchmark using Google ADK.
 
+## 🎬 Real Time Run
+
+### Green Agent Evaluation Process
+
+<table>
+  <tr>
+    <td><img src="images/green_agent1.png" alt="Green Agent Evaluation 1" width="400"/></td>
+    <td><img src="images/green_agent2.png" alt="Green Agent Evaluation 2" width="400"/></td>
+  </tr>
+</table>
+
+### Purple Agent Execution
+
+<table>
+  <tr>
+    <td><img src="images/purple_agent1.png" alt="Purple Agent 1" width="400"/></td>
+    <td><img src="images/purple_agent2.png" alt="Purple Agent 2" width="400"/></td>
+  </tr>
+</table>
+
 ## 🎯 Overview
 
 This project implements a **Green Agent (Evaluator)** that assesses **Purple Agents (Test Takers)** on the GAIA benchmark using the official **Agent-to-Agent (A2A) Protocol**. Both agents are built with **Google Agent Development Kit (ADK)** and communicate via standardized A2A messaging.
