@@ -21,14 +21,14 @@ from .sub_agents.calculator import calculator_agent
 
 MODEL = "gemini-2.5-pro"
 
-gaia_coordinator = LlmAgent(
-    name="gaia_coordinator",
+gaia_test_taker = LlmAgent(
+    name="gaia_test_taker",
     model=MODEL,
     description=(
-        "Orchestrates specialized sub-agents to answer GAIA benchmark questions. "
-        "Analyzes questions, decomposes tasks, delegates to appropriate agents "
+        "Advanced multi-agent test taker for GAIA benchmark questions. "
+        "Analyzes questions, decomposes tasks, delegates to specialized agents "
         "(web search, deep analysis, calculation), and synthesizes results into "
-        "concise final answers."
+        "accurate final answers."
     ),
     instruction=prompt.GAIA_COORDINATOR_PROMPT,
     output_key="final_answer",
@@ -39,5 +39,6 @@ gaia_coordinator = LlmAgent(
     ],
 )
 
-# Export as root_agent for compatibility with ADK patterns
-root_agent = gaia_coordinator
+# Export both names for compatibility
+gaia_coordinator = gaia_test_taker  # Backward compatibility
+root_agent = gaia_test_taker

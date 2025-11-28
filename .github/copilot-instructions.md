@@ -5,6 +5,12 @@ This green agent must evaluate A2A-compatible purple agents end-to-end.
 
 Follow these requirements precisely:
 
+Always make sure to check for venv and activate then before running any terminal commands.
+source venv/bin/activate
+
+Also timeout command doesn't exist
+
+
 1. Project Goal
 We are building a “green agent” that:
 Loads GAIA benchmark questions (text reasoning + tool use tasks)

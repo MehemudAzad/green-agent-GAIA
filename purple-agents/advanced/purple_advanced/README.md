@@ -84,13 +84,21 @@ python -m purple_advanced.a2a_server
 
 The server will start on port 8081 (configurable via `PURPLE_ADVANCED_PORT`).
 
+**⚠️ Important: Use A2A Server, Not ADK Web**
+
+The green agent evaluator requires an A2A HTTP endpoint. Do NOT use `adk web` command:
+- ❌ `adk web purple_advanced/agent.py` - Creates web UI but NOT A2A compatible
+- ✅ `python -m purple_advanced.a2a_server` - Correct A2A HTTP endpoint
+
+The `adk web` command is for interactive testing in a browser, but it doesn't expose the A2A protocol that the green agent needs to communicate.
+
 ### Testing with Green Agent
 
 Once running, the green agent can evaluate this purple agent:
 
 ```bash
 # In another terminal, start the green evaluator
-python -m agent.evaluator --agent-url http://localhost:8081
+python -m agent.evaluator --purple-agent-url http://localhost:8081
 ```
 
 ### Direct Usage (Python)

@@ -14,11 +14,15 @@
 
 """Deep Analyzer Agent for complex reasoning and multi-step problem solving."""
 
+import os
+from dotenv import load_dotenv
 from google.adk.agents import LlmAgent
 
 from . import prompt
 
-MODEL = "gemini-2.5-pro"
+load_dotenv()
+# Use Gemini 1.5 Pro for deep analysis (strong reasoning)
+MODEL = os.getenv("DEEP_ANALYZER_MODEL", "gemini-1.5-pro")
 
 deep_analyzer_agent = LlmAgent(
     model=MODEL,
